@@ -66,7 +66,7 @@ ks = [1:1:50;]
 @time best_λ, best_β_ht, mean_errors = CV_SQR(X,y,τ,λs,h=h, nfold=5)
 ```
 
-## Quick Start for L2E regression
+## Quick Start for L2E Regression
 ```julia
 using MMDeweighting, Distributions, LinearAlgebra, Statistics
 p = 100
@@ -97,7 +97,7 @@ X = [ones(n,1) X]
 @time beta2, τ2, obj2 = FastL2E(X,y,β0,τ0; MM=true,tol=1e-6,verbose=false)
 ```
 
-## Quick Start for L2E Isotonic regression
+## Quick Start for L2E Isotonic Regression
 ```julia
 using MMDeweighting, Distributions, LinearAlgebra, Statistics, DelimitedFiles
 data = readdlm("data/december.csv", ',', Any, '\n') 
