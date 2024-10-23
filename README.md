@@ -1,5 +1,13 @@
 # MMDeweighting
 
+## Installation
+Open Julia REPL and proceed to the project directory
+```Julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+```
+
 ## Quick Start for Quantile Regression
 ```julia
 # generate data
