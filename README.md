@@ -10,7 +10,7 @@ Pkg.instantiate()
 
 ## Quick Start for Quantile Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 p = 100
@@ -32,7 +32,7 @@ h = max(0.05, ((log(n) + p) / n)^0.4)
 
 ## Quick Start for Sparse Quantile Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 n = 250
@@ -59,7 +59,7 @@ ks = [1:1:50;]
 
 ## Quick Start for L2E Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 p = 100
@@ -87,7 +87,7 @@ X = [ones(n) X]
 
 ## Quick Start for L2E Isotonic Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics, DelimitedFiles
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, DelimitedFiles, Random
 #data = readdlm("data/december.csv", ',', Any, '\n') 
 data = readdlm("data/december.csv", ',', Float64)
 y = data[:, 2]
@@ -103,7 +103,7 @@ y = data[:, 2]
 
 ## Quick Start for Logistic Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 p = 30
@@ -124,7 +124,7 @@ X = [ones(n) X]
 
 ## Quick Start for Multinomial Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 p = 30
@@ -153,7 +153,7 @@ end
 
 ## Quick Start for Low-rank Multinomial Regression
 ```julia
-using MMDeweighting, Distributions, LinearAlgebra, Statistics
+using MMDeweighting, Distributions, LinearAlgebra, Statistics, Random
 Random.seed!(123)
 # generate data
 p = 100

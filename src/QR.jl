@@ -39,7 +39,7 @@ function FastQR(X::Matrix, y::Vector, τ::Real; h=0.25, tol=1e-6, verbose=true)
     mul!(copy!(r, y), X, β, T(-1), T(1)) # r = y - X * β
     obj = QuantileLoss(r, τ, h)
     if verbose
-      println(iter,"  ",obj,"  ", h, " ",k)
+      println(iter,"  ",obj,"  ", h, " ",nesterov)
     end
     MoreauProx!(s, r, h, τ) # MM shift
     # shift the response
