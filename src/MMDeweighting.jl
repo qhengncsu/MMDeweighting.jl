@@ -1,7 +1,10 @@
 module MMDeweighting
-export QuantileLoss,FastQR, SparseQR, CV_SQR, FastL2E, L2EIsotonic, loglikelihood, FastLogistic, FastMultinomial, compute_probs!
-export LowrankMultinomial,proj_rank!
-using LinearAlgebra, Random, Statistics
+export QuantileLoss, MoreauProx!, FastQR, SparseQR, CV_SQR
+export FastL2E, L2EIsotonic
+export loglikelihood, FastLogistic, FastMultinomial
+export compute_probs_reduced!
+export LowrankMultinomial, proj_rank!
+using LinearAlgebra, Random, Statistics, Printf
 include("QR.jl")
 include("SQR.jl")
 include("L2E.jl")

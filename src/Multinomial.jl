@@ -45,24 +45,6 @@ function FastLogistic(X::Matrix, y::Vector; tol::Real=1e-6, verbose=true)
     return (β, obj, max_iters)
 end
 
-function compute_probs!(P::Matrix, ηs::Matrix, row_sums::Vector)
-    n, q = size(ηs)
-    @inbounds for i in 1:n, j in 1:q
-        P[i,j] = exp(ηs[i,j])
-    end
-    fill!(row_sums, zero(eltype(P)))
-    @inbounds for i in 1:n, j in 1:q
-        row_sums[i] += P[i,j]
-    end
-    
-    @inbounds for i in 1:n
-        inv_sum = inv(row_sums[i])
-        for j in 1:q
-            P[i,j] *= inv_sum
-        end
-    end
-end
-
 function loglikelihood(Y::Matrix, P::Matrix)
     T = eltype(P)
     obj = zero(T)
@@ -76,43 +58,93 @@ function loglikelihood(Y::Matrix, P::Matrix)
     obj
 end
 
-function FastMultinomial(X::Matrix, Y::Matrix; tol::Real=1e-6, verbose=true)
-    ((n, p), q, max_iters) = (size(X), size(Y,2), 1000)
-    ηs, r, P = similar(Y), similar(Y), similar(Y)
+function compute_probs_reduced!(P::Matrix{T}, ηs::Matrix{T}, row_sums::Vector{T}) where T <: AbstractFloat
+    n, q = size(ηs)
+    # q+1 classes: first q have linear predictors, last one has η=0
+    @inbounds for i in 1:n
+        # find row max (including the reference category η=0)
+        max_η = zero(T)
+        for j in 1:q
+            max_η = max(max_η, ηs[i,j])
+        end
+        # compute exp(η - max_η) for each class
+        row_sums[i] = exp(-max_η)  # reference category: exp(0 - max_η)
+        for j in 1:q
+            P[i,j] = exp(ηs[i,j] - max_η)
+            row_sums[i] += P[i,j]
+        end
+        # normalize
+        inv_sum = inv(row_sums[i])
+        for j in 1:q
+            P[i,j] *= inv_sum
+        end
+        P[i, q+1] = exp(-max_η) * inv_sum
+    end
+end
+
+function FastMultinomial(X::Matrix, Y::Matrix;
+    tol            = 1e-6,
+    max_iters      = 1000,
+    strategy       = "nesterov",
+    doubling_start = 20,
+    verbose        = true,
+)
+    strategy in ("original", "nesterov", "step-doubling") ||
+        throw(ArgumentError("strategy must be \"original\", \"nesterov\", or \"step-doubling\", got \"$strategy\""))
+    ((n, p), c) = (size(X), size(Y, 2))
+    q = c - 1
+    ηs              = zeros(n, q)
+    r               = zeros(n, q)
+    P               = similar(Y)
     row_sums_buffer = zeros(n)
-    XTX, XTY = X'X , X'Y
-    L = cholesky!(Symmetric(XTX))
-    B = zeros(p,q)
-    direction, grad = similar(B), similar(B)
-    mul!(ηs, X, B) # ηs = X * β
+    XTX = X'X
+    XTY = X'Y[:, 1:q]
+    L   = cholesky!(Symmetric(XTX))
+    B         = zeros(p, q)
+    direction = similar(B)
+    grad      = similar(B)
+    E       = 2 .* (Diagonal(ones(q)) + ones(q) * ones(q)')
+    γ, δ    = copy(B), copy(B)
+    nesterov = 0
     obj, old_obj = 0.0, Inf
-    (γ, δ) = (copy(B), copy(B))
-    nesterov = 0 
-    E = 2 .*(Diagonal(ones(q)) + ones(q)*Transpose(ones(q)))
-    for iteration = 1:max_iters
-        nesterov  += 1
-        @. B = γ + ((nesterov  - 1)/(nesterov + 2)) * (γ - δ)
-        @. δ = γ # Nesterov acceleration
-        mul!(ηs, X, B) # ηs = X * β
-        compute_probs!(P,ηs,row_sums_buffer)
+    for iter in 1:max_iters
+        if strategy === "nesterov"
+            nesterov += 1
+            @. B = γ + ((nesterov - 1) / (nesterov + 2)) * (γ - δ)
+            @. δ = γ
+        else
+            @. B = γ
+            @. δ = γ
+        end
+        mul!(ηs, X, B)
+        compute_probs_reduced!(P, ηs, row_sums_buffer)
         obj = -loglikelihood(Y, P)
         if verbose
-            println(iteration," ",obj," ",nesterov)
+            if strategy === "original"
+                phase = "original"
+            elseif strategy === "nesterov"
+                phase = @sprintf("nesterov k=%d", nesterov)
+            else
+                phase = iter >= doubling_start ? "step-doubling" : "plain"
+            end
+            @printf("%4d  obj=%.6g  %s\n", iter, obj, phase)
         end
-        if old_obj < obj 
-            nesterov = 0 
+        if old_obj < obj && strategy === "nesterov"
+            nesterov = 0
         end
-        @. r = Y - P
+        if abs(obj - old_obj) < tol * (abs(old_obj) + 1)
+            verbose && @printf("Converged at iter %d\n", iter)
+            return (B, obj, iter)
+        end
+        @. r = Y[:, 1:q] - P[:, 1:q]
         mul!(grad, transpose(X), r)
         ldiv!(XTY, L, grad)
-        mul!(direction,XTY, E)
-        @. B = B + direction
-        if abs(obj-old_obj) < tol*(abs(old_obj)+1)
-            return (B, obj, iteration)
-        else
-            @. γ = B
-            old_obj = obj
-        end
+        mul!(direction, XTY, E)
+        step = (strategy === "step-doubling" && iter >= doubling_start) ? 2 : 1
+        @. B = B + step * direction
+        @. γ = B
+        old_obj = obj
     end
+    verbose && @printf("Max iters (%d) reached\n", max_iters)
     return (B, obj, max_iters)
 end
